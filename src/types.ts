@@ -62,7 +62,7 @@ export interface SightSetting {
   archer_id: string;
 }
 
-export type ViewState = 'dashboard' | 'log_session' | 'analyze_form' | 'history' | 'onboarding' | 'profile' | 'view_session' | 'arrow_tool' | 'sight_settings';
+export type ViewState = 'dashboard' | 'log_session' | 'analyze_form' | 'history' | 'onboarding' | 'profile' | 'view_session' | 'arrow_tool' | 'sight_settings' | 'ai_assistant';
 
 export interface PerformanceStats {
   averageScore: number;

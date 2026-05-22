@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { ArcherProfile, Session, SightSetting, FormAnalysis } from '../types';
 
 const ai = new GoogleGenAI({ 
   apiKey: process.env.GEMINI_API_KEY || "" 
@@ -7,6 +8,136 @@ const ai = new GoogleGenAI({
 export interface Message {
   role: 'user' | 'model';
   text: string;
+}
+
+export async function getTacticalAdvice(
+  userPrompt: string,
+  history: Message[],
+  context: {
+    profile: ArcherProfile | null;
+    sessions: Session[];
+    sightSettings: SightSetting[];
+    analyses: FormAnalysis[];
+  }
+) {
+  // 1. Format Profile Context
+  let profileSection = "No profile configured yet.";
+  if (context.profile) {
+    const p = context.profile;
+    profileSection = `
+Archer Name: ${p.name || "Archer"}
+Experience Level: ${p.experience_level}
+Bow Type: ${p.bow_type}
+Draw Weight: ${p.draw_weight} lbs
+Draw Length: ${p.draw_length} inches
+Arrow Length: ${p.arrow_length ? p.arrow_length + " inches" : "Not set"}
+Arrow Spine: ${p.arrow_spine || "Not calculated yet"}
+Point Weight: ${p.point_weight ? p.point_weight + " grains" : "Not set"}
+Riser Length: ${p.riser_length ? p.riser_length + " inches" : "Not set"}
+Limb Size: ${p.limb_size || "Not set"}
+Brace Height: ${p.brace_height ? p.brace_height + " inches" : "Not set"}
+Anchor Point Description: ${p.anchor_point || "Not set"}
+    `.trim();
+  }
+
+  // 2. Format Sight Settings Context
+  let sightSection = "No sight settings saved yet.";
+  if (context.sightSettings.length > 0) {
+    sightSection = context.sightSettings.map(s => {
+      const windLabel = s.windage > 0 ? `L ${s.windage}` : s.windage < 0 ? `R ${Math.abs(s.windage)}` : "Center/0";
+      return `- Distance: ${s.distance} meters -> Elevation: ${s.elevation}, Windage: ${windLabel}${s.notes ? ` (Notes: ${s.notes})` : ""}`;
+    }).join("\n");
+  }
+
+  // 3. Format Sessions / History Context
+  let sessionsSection = "No training sessions logged yet.";
+  if (context.sessions.length > 0) {
+    // Take the 5 most recent sessions
+    const recentSessions = [...context.sessions]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5);
+
+    sessionsSection = recentSessions.map(s => {
+      const scores = s.shots.map(sh => sh.score);
+      const totalScore = scores.reduce((sum, score) => sum + score, 0);
+      const avgScore = scores.length > 0 ? (totalScore / scores.length).toFixed(1) : "0";
+      const xCount = s.shots.filter(sh => sh.is_x).length;
+      return `- Session "${s.name}" on ${new Date(s.date).toLocaleDateString()}:
+  Distance: ${s.distance}m, Target Typology: ${s.target_type}
+  Total Shots: ${s.shots.length}, Accumulated Score: ${totalScore}, Avg Arrow: ${avgScore}, X-Ring Bullseyes: ${xCount}
+  Individual Arrow Scores: ${scores.slice(0, 18).join(", ")}${scores.length > 18 ? "..." : ""}`;
+    }).join("\n\n");
+  }
+
+  // 4. Format Form Analysis Context
+  let analysesSection = "No AI diagnostic form analyses uploaded yet.";
+  if (context.analyses.length > 0) {
+    const recentAnalyses = [...context.analyses]
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 3);
+      
+    analysesSection = recentAnalyses.map((a, i) => {
+      return `[Analysis #${i+1} on ${new Date(a.timestamp).toLocaleDateString()}]:
+  - Identified Issues: ${(a.issues || []).join(", ") || "None"}
+  - Recommendations: ${(a.recommendations || []).join(", ") || "None"}
+  - Detailed Notes: ${a.raw_analysis || "No narrative available."}`;
+    }).join("\n\n");
+  }
+
+  const systemInstruction = `You are "Valkyrie", an advanced Archery Technical Advisor & High-Performance AI Coach.
+You have comprehensive real-time access to the user's complete profile, calibrated sight register, training sessions feed, and biomechanical form analysis telemetry.
+
+Here is the synchronized real-time context of the archer:
+
+=====================================
+1. COMBAT DOSSIER & PROFILE:
+${profileSection}
+
+2. SIGHT CALIBRATIONS (MARKS):
+${sightSection}
+
+3. RECENT TARGET HISTORY (5 Sessions):
+${sessionsSection}
+
+4. BIOMECHANICAL SHOT-FORM ANALYSIS:
+${analysesSection}
+=====================================
+
+TECHNICAL RULES & CAPABILITIES:
+1. SIGHT PREDICTIVE MATH:
+   - If the user asks for intermediate sight placements (e.g. they have sight marks at 30m and 50m but want to shoot at 40m), perform visual/ballistic linear or parabolic interpolation estimating the correct elevation aperture height.
+   - Example: If 30m is elevation '6.5' and 50m is '4.5', then 40m will be around '5.5'. Always explain your interpolation steps.
+
+2. SPINE CALCULATION & TUNING:
+   - If asked about spine or arrow flight, analyze whether their bow draw weight, arrow length, and point weight match their Arrow Spine. Remember: safety first (ensure arrow length exceeds or equals draw length plus 1 inch!).
+   - Increasing point weight or draw weight WEAKENS the dynamic spine; shortening the arrow or moving to a higher static spine number STIFFENS the arrow.
+
+3. CONSISTENCY DIAGNOSTIC:
+   - Examine their recent Training Sessions scores and arrow arrays. Analyze average scores, consistency, and standard drift to advise them on training drills (e.g. "blank bale drilling", "back tension activation", "solid head-tilt anchor focus").
+
+4. RE-COACH FORM DEFECTS:
+   - If they ask about form or stance, look at their biomechanical analyses and reinforce the corrective actions (e.g., if issue is "anchor drift", explain how they can secure their jawline index).
+
+Keep your persona highly analytical, intelligent, supportive, and extremely professional. Format your outputs using beautiful markdown headers, bullet lists, bold text elements, and font-mono blocks for numeric ranges.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: [
+        ...history.map(m => ({ role: m.role, parts: [{ text: m.text }] })),
+        { role: 'user', parts: [{ text: userPrompt }] }
+      ],
+      config: {
+        systemInstruction,
+        temperature: 0.7,
+      },
+    });
+
+    return response.text || "I apologize, I was unable to compile an analytical response from my processors.";
+  } catch (error) {
+    console.error("Gemini Tactical Advice Error:", error);
+    return "An error occurred compiling high-performance analytics. Please verify your connection telemetry and retry.";
+  }
 }
 
 export async function getArrowAdvice(

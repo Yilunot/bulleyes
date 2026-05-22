@@ -21,6 +21,7 @@ import Onboarding from './components/Onboarding';
 import Scorecard from './components/Scorecard';
 import ArrowGuider from './components/ArrowGuider';
 import SightSettingsManager from './components/SightSettingsManager';
+import AIAssistant from './components/AIAssistant';
 import { auth, db } from './lib/firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, deleteDoc, collection, onSnapshot, query, orderBy } from 'firebase/firestore';
@@ -228,6 +229,15 @@ function AppContent() {
         return <Onboarding onComplete={handleProfileComplete} initialData={profile || undefined} />;
       case 'arrow_tool':
         return <ArrowGuider />;
+      case 'ai_assistant':
+        return (
+          <AIAssistant 
+            profile={profile} 
+            sessions={sessions} 
+            sightSettings={sightSettings} 
+            analyses={analyses} 
+          />
+        );
       case 'sight_settings':
         return (
           <SightSettingsManager 

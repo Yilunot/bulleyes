@@ -7,7 +7,6 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Target, Info, RefreshCw, Zap, ArrowDown, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { calculateArrowSpecs, calculateDrawLength, calculateArrowSpine, getIdealArrowLength } from '../lib/archerUtils';
-import AIAssistant from './AIAssistant';
 
 export default function ArrowGuider() {
   const [inputs, setInputs] = useState({
@@ -252,15 +251,6 @@ export default function ArrowGuider() {
           </section>
         </div>
       </div>
-
-      {/* AI Assistant Section */}
-      <footer className="mt-12">
-        <div className="flex flex-col gap-4 mb-6 text-center">
-          <h2 className="text-xl font-bold tracking-tight">Valkyrie Intelligence</h2>
-          <p className="text-gray-500 font-mono text-[10px] uppercase tracking-widest">Consult your personal arrow architect for deep optimization</p>
-        </div>
-        <AIAssistant config={{ ...inputs, spine }} />
-      </footer>
     </div>
   );
 }
