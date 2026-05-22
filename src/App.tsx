@@ -14,12 +14,13 @@ import Dashboard from './components/Dashboard';
 import SessionLogger from './components/SessionLogger';
 import FormAnalyzer from './components/FormAnalyzer';
 import Login from './components/Login';
-import { ViewState, Session, FormAnalysis, ArcherProfile } from './types';
+import { ViewState, Session, FormAnalysis, ArcherProfile, SightSetting } from './types';
 import { motion } from 'motion/react';
 import { Award, Calendar, Target as TargetIcon, Trash2 } from 'lucide-react';
 import Onboarding from './components/Onboarding';
 import Scorecard from './components/Scorecard';
 import ArrowGuider from './components/ArrowGuider';
+import SightSettingsManager from './components/SightSettingsManager';
 import { auth, db } from './lib/firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, deleteDoc, collection, onSnapshot, query, orderBy } from 'firebase/firestore';
@@ -45,6 +46,7 @@ function AppContent() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [analyses, setAnalyses] = useState<FormAnalysis[]>([]);
   const [profile, setProfile] = useState<ArcherProfile | null>(null);
+  const [sightSettings, setSightSettings] = useState<SightSetting[]>([]);
 
   const handleDeleteSession = async (sessionId: string) => {
     if (!user) return;
@@ -68,6 +70,7 @@ function AppContent() {
         setProfile(null);
         setSessions([]);
         setAnalyses([]);
+        setSightSettings([]);
       }
     });
 
@@ -111,8 +114,23 @@ function AppContent() {
       handleFirestoreError(err, OperationType.GET, `users/${user.uid}/sessions`);
     });
 
+    // Listen to Sight Settings
+    const sightSettingsRef = collection(db, 'users', user.uid, 'sight_settings');
+    const qSight = query(sightSettingsRef, orderBy('distance', 'asc'));
+    
+    const unsubscribeSightSettings = onSnapshot(qSight, (snapshot) => {
+      const loadedSightSettings = snapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id
+      })) as SightSetting[];
+      setSightSettings(loadedSightSettings);
+    }, (err) => {
+      handleFirestoreError(err, OperationType.GET, `users/${user.uid}/sight_settings`);
+    });
+
     return () => {
       unsubscribeSessions();
+      unsubscribeSightSettings();
     };
   }, [user]);
 
@@ -147,6 +165,39 @@ function AppContent() {
     setActiveView('history');
   };
 
+  const handleSaveSightSetting = async (setting: Omit<SightSetting, 'id' | 'archer_id'> & { id?: string }) => {
+    if (!user) return;
+    try {
+      const isNew = !setting.id;
+      const settingRef = isNew 
+        ? doc(collection(db, 'users', user.uid, 'sight_settings'))
+        : doc(db, 'users', user.uid, 'sight_settings', setting.id!);
+      
+      const settingData: SightSetting = {
+        ...setting,
+        id: settingRef.id,
+        archer_id: user.uid,
+        date: setting.date || new Date().toISOString()
+      };
+      
+      await setDoc(settingRef, settingData);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/sight_settings`);
+      throw err;
+    }
+  };
+
+  const handleDeleteSightSetting = async (settingId: string) => {
+    if (!user) return;
+    try {
+      const settingRef = doc(db, 'users', user.uid, 'sight_settings', settingId);
+      await deleteDoc(settingRef);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, `users/${user.uid}/sight_settings/${settingId}`);
+      throw err;
+    }
+  };
+
   const viewSessionDetail = (id: string) => {
     setSelectedSessionId(id);
     setActiveView('view_session');
@@ -177,6 +228,14 @@ function AppContent() {
         return <Onboarding onComplete={handleProfileComplete} initialData={profile || undefined} />;
       case 'arrow_tool':
         return <ArrowGuider />;
+      case 'sight_settings':
+        return (
+          <SightSettingsManager 
+            sightSettings={sightSettings} 
+            onSave={handleSaveSightSetting} 
+            onDelete={handleDeleteSightSetting} 
+          />
+        );
       case 'dashboard':
         return <Dashboard sessions={sessions} onViewSession={viewSessionDetail} />;
       case 'log_session':

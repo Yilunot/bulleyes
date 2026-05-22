@@ -52,7 +52,17 @@ export interface ArcherProfile {
   joined_date: number;
 }
 
-export type ViewState = 'dashboard' | 'log_session' | 'analyze_form' | 'history' | 'onboarding' | 'profile' | 'view_session' | 'arrow_tool';
+export interface SightSetting {
+  id: string;
+  distance: number; // in meters (e.g. 18, 30, 50, 70)
+  elevation: number; // vertical sight scale value (e.g. 4.5)
+  windage: number; // horizontal sight scale value (e.g. 0 or positive/negative offset)
+  notes?: string; // extra notes like bow configurations or range wind
+  date: string; // ISO timestamp
+  archer_id: string;
+}
+
+export type ViewState = 'dashboard' | 'log_session' | 'analyze_form' | 'history' | 'onboarding' | 'profile' | 'view_session' | 'arrow_tool' | 'sight_settings';
 
 export interface PerformanceStats {
   averageScore: number;

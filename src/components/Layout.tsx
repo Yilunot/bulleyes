@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { LayoutDashboard, Target, Camera, History, Menu, X, ArrowRight, User, LogOut, Zap, Sun, Moon } from 'lucide-react';
+import { LayoutDashboard, Target, Camera, History, Menu, X, ArrowRight, User, LogOut, Zap, Sun, Moon, Sliders } from 'lucide-react';
 import { ViewState } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useState } from 'react';
@@ -34,6 +34,7 @@ export default function Layout({ children, activeView, onViewChange, userName }:
     { id: 'log_session', label: 'Log Session', icon: Target },
     { id: 'analyze_form', label: 'AI Coach', icon: Camera },
     { id: 'arrow_tool', label: 'Arrow Calculator', icon: Zap },
+    { id: 'sight_settings', label: 'Sight Marks', icon: Sliders },
     { id: 'history', label: 'History', icon: History },
   ];
 

@@ -66,6 +66,27 @@ service cloud.firestore {
           && incoming().id == existing().id;
         allow delete: if isOwner(userId);
       }
+
+      // Sight Settings Subcollection
+      match /sight_settings/{settingId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+
+        function isValidSightSetting(data) {
+          return data.keys().hasAll(['id', 'distance', 'elevation', 'windage', 'archer_id', 'date'])
+            && data.id is string
+            && data.distance is number
+            && data.elevation is number
+            && data.windage is number
+            && data.archer_id == userId
+            && data.date is string;
+        }
+
+        allow create: if isOwner(userId) && isValidSightSetting(incoming());
+        allow update: if isOwner(userId) && isValidSightSetting(incoming())
+          && incoming().id == existing().id;
+        allow delete: if isOwner(userId);
+      }
     }
   }
 }
