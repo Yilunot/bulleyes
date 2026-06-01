@@ -71,3 +71,9 @@ export interface PerformanceStats {
   consistencyScore: number; // 0-1
   progressTrend: 'up' | 'down' | 'steady';
 }
+
+export interface AgentConfig {
+  tone: 'analytical' | 'supportive' | 'zen' | 'strict';
+  rules: string[];
+}
+

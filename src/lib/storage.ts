@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Session, FormAnalysis, ArcherProfile } from '../types';
+import { Session, FormAnalysis, ArcherProfile, AgentConfig } from '../types';
 
 const SESSIONS_KEY = 'bullseye_sessions';
 const ANALYSES_KEY = 'bullseye_analyses';
 const PROFILE_KEY = 'bullseye_profile';
+const AGENT_CONFIG_KEY = 'valkyrie_agent_config';
 
 export const storage = {
   saveProfile: (profile: ArcherProfile) => {
@@ -49,5 +50,29 @@ export const storage = {
   getAnalyses: (): FormAnalysis[] => {
     const data = localStorage.getItem(ANALYSES_KEY);
     return data ? JSON.parse(data) : [];
+  },
+
+  saveAgentConfig: (config: AgentConfig) => {
+    localStorage.setItem(AGENT_CONFIG_KEY, JSON.stringify(config));
+  },
+
+  getAgentConfig: (): AgentConfig => {
+    const data = localStorage.getItem(AGENT_CONFIG_KEY);
+    if (data) {
+      try {
+        return JSON.parse(data);
+      } catch (e) {
+        // Fall back to default
+      }
+    }
+    return {
+      tone: 'analytical',
+      rules: [
+        'Always warn about draw weight/arrow spine mismatches.',
+        'Include a specific breathing cadence cue.',
+        'Focus corrections on steady back tension release.'
+      ]
+    };
   }
 };
+

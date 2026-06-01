@@ -20,12 +20,19 @@ import {
   Info,
   ChevronRight,
   TrendingUp,
-  Award
+  Award,
+  BookOpen,
+  Volume2,
+  ListPlus,
+  Trash2,
+  CheckCircle2,
+  Lock
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { getTacticalAdvice, Message } from '../services/geminiService';
 import { ArcherProfile, Session, SightSetting, FormAnalysis } from '../types';
 import { useTheme } from '../context/ThemeContext';
+import { storage } from '../lib/storage';
 
 interface AIAssistantProps {
   profile: ArcherProfile | null;
@@ -45,6 +52,11 @@ export default function AIAssistant({ profile, sessions, sightSettings, analyses
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Agent State Controls
+  const [agentConfig, setAgentConfig] = useState(() => storage.getAgentConfig());
+  const [newRuleInput, setNewRuleInput] = useState('');
+  const [activeTab, setActiveTab] = useState<'dossier' | 'agent_panel'>('dossier');
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -67,7 +79,7 @@ export default function AIAssistant({ profile, sessions, sightSettings, analyses
       const response = await getTacticalAdvice(
         userMessage, 
         messages, 
-        { profile, sessions, sightSettings, analyses }
+        { profile, sessions, sightSettings, analyses, agentConfig }
       );
       setMessages(prev => [...prev, { role: 'model', text: response }]);
     } catch (err) {
@@ -79,6 +91,7 @@ export default function AIAssistant({ profile, sessions, sightSettings, analyses
       setIsLoading(false);
     }
   };
+
 
   // Preset query prompts
   const presets = [
@@ -250,147 +263,414 @@ export default function AIAssistant({ profile, sessions, sightSettings, analyses
           </div>
         </div>
 
-        {/* Right column: Interactive Context Dossier Panel */}
+        {/* Right column: Interactive Context Dossier / Agent Configuration Tab Controller */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-[var(--card-bg)] border border-[var(--line)] rounded-3xl p-6 shadow-sm space-y-6">
-            <div className="flex items-center justify-between border-b border-[var(--line)] pb-4">
-              <div>
-                <h3 className="text-sm font-bold tracking-tight">Context dossier</h3>
-                <p className="text-[9px] font-mono text-[var(--muted)] uppercase tracking-wider">
-                  Live database parameters
-                </p>
-              </div>
-              <Sparkles size={14} className="text-[#dcfc44]" />
-            </div>
+          {/* Tab Selector */}
+          <div className="flex p-1 bg-[var(--line)]/50 border border-[var(--line)] rounded-2xl">
+            <button
+              onClick={() => setActiveTab('dossier')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[10px] font-mono uppercase tracking-wider rounded-xl transition-all cursor-pointer ${
+                activeTab === 'dossier' 
+                  ? 'bg-[var(--card-bg)] border border-[var(--line)] text-[#dcfc44] font-bold shadow-sm' 
+                  : 'text-gray-500 hover:text-[var(--ink)]'
+              }`}
+            >
+              <Database size={10} />
+              <span>Dossier</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('agent_panel')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[10px] font-mono uppercase tracking-wider rounded-xl transition-all cursor-pointer ${
+                activeTab === 'agent_panel' 
+                  ? 'bg-[var(--card-bg)] border border-[var(--line)] text-[#dcfc44] font-bold shadow-sm' 
+                  : 'text-gray-500 hover:text-[var(--ink)]'
+              }`}
+            >
+              <Cpu size={10} />
+              <span>Agent Brain</span>
+            </button>
+          </div>
 
-            {/* Config Profile Stats Section */}
-            <div className="space-y-3.5">
-              <h4 className="text-[10px] font-mono text-[var(--muted)] uppercase tracking-widest flex items-center gap-2">
-                <Sliders size={12} className="text-[var(--accent)]" />
-                <span>1. Archer Profile Spec</span>
-              </h4>
-              {profile ? (
-                <div className="bg-[var(--line)]/30 backdrop-blur-sm rounded-2xl p-4 space-y-2.5 font-mono text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500 uppercase">Bow Style</span>
-                    <span className="font-bold uppercase text-[var(--ink)]">{profile.bow_type}</span>
+          <AnimatePresence mode="wait">
+            {activeTab === 'dossier' ? (
+              <motion.div
+                key="dossier-tab"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="bg-[var(--card-bg)] border border-[var(--line)] rounded-3xl p-6 shadow-sm space-y-6"
+              >
+                <div className="flex items-center justify-between border-b border-[var(--line)] pb-4">
+                  <div>
+                    <h3 className="text-sm font-bold tracking-tight">Context dossier</h3>
+                    <p className="text-[9px] font-mono text-[var(--muted)] uppercase tracking-wider">
+                      Live database parameters
+                    </p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500 uppercase">Draw Weight</span>
-                    <span className="font-bold text-[var(--ink)]">{profile.draw_weight} lbs</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500 uppercase">Draw Length</span>
-                    <span className="font-bold text-[var(--ink)]">{profile.draw_length}"</span>
-                  </div>
-                  {profile.arrow_length && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500 uppercase">Arrow Length</span>
-                      <span className="font-bold text-[var(--ink)]">{profile.arrow_length}"</span>
+                  <Sparkles size={14} className="text-[#dcfc44]" />
+                </div>
+
+                {/* Config Profile Stats Section */}
+                <div className="space-y-3.5">
+                  <h4 className="text-[10px] font-mono text-[var(--muted)] uppercase tracking-widest flex items-center gap-2">
+                    <Sliders size={12} className="text-[var(--accent)]" />
+                    <span>1. Archer Profile Spec</span>
+                  </h4>
+                  {profile ? (
+                    <div className="bg-[var(--line)]/30 backdrop-blur-sm rounded-2xl p-4 space-y-2.5 font-mono text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 uppercase">Bow Style</span>
+                        <span className="font-bold uppercase text-[var(--ink)]">{profile.bow_type}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 uppercase">Draw Weight</span>
+                        <span className="font-bold text-[var(--ink)]">{profile.draw_weight} lbs</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 uppercase">Draw Length</span>
+                        <span className="font-bold text-[var(--ink)]">{profile.draw_length}"</span>
+                      </div>
+                      {profile.arrow_length && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500 uppercase">Arrow Length</span>
+                          <span className="font-bold text-[var(--ink)]">{profile.arrow_length}"</span>
+                        </div>
+                      )}
+                      {profile.arrow_spine && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500 uppercase">Required Spine</span>
+                          <span className="font-bold text-[#dcfc44]">{profile.arrow_spine}</span>
+                        </div>
+                      )}
+                      {profile.point_weight && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500 uppercase">Point Weight</span>
+                          <span className="font-bold text-[var(--ink)]">{profile.point_weight} gr</span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                  {profile.arrow_spine && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500 uppercase">Required Spine</span>
-                      <span className="font-bold text-[#dcfc44]">{profile.arrow_spine}</span>
-                    </div>
-                  )}
-                  {profile.point_weight && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500 uppercase">Point Weight</span>
-                      <span className="font-bold text-[var(--ink)]">{profile.point_weight} gr</span>
+                  ) : (
+                    <div className="p-4 rounded-2xl bg-[var(--line)]/10 border border-dashed border-[var(--line)] text-center text-xs font-mono text-[var(--muted)]">
+                      Profile data empty. Go to onboarding first!
                     </div>
                   )}
                 </div>
-              ) : (
-                <div className="p-4 rounded-2xl bg-[var(--line)]/10 border border-dashed border-[var(--line)] text-center text-xs font-mono text-[var(--muted)]">
-                  Profile data empty. Go to onboarding first!
-                </div>
-              )}
-            </div>
 
-            {/* Sight Settings Section */}
-            <div className="space-y-3.5">
-              <h4 className="text-[10px] font-mono text-[var(--muted)] uppercase tracking-widest flex items-center gap-2">
-                <Target size={12} className="text-blue-400" />
-                <span>2. Sight Registry Feed</span>
-              </h4>
-              {sightSettings.length > 0 ? (
-                <div className="bg-[var(--line)]/30 backdrop-blur-sm rounded-2xl p-4 max-h-36 overflow-y-auto space-y-2 font-mono text-xs scrollbar-hide">
-                  {sightSettings.map(s => (
-                    <div key={s.id} className="flex justify-between items-center border-b border-[var(--line)]/40 pb-1.5 last:border-b-0 last:pb-0">
-                      <span className="font-bold text-[#dcfc44]">{s.distance} meters</span>
-                      <div className="text-right">
-                        <span className="text-gray-300">Elev {s.elevation}</span>
-                        {s.windage !== 0 && (
-                          <span className="text-blue-400 ml-1.5">W: {s.windage > 0 ? `L${s.windage}` : `R${Math.abs(s.windage)}`}</span>
-                        )}
+                {/* Sight Settings Section */}
+                <div className="space-y-3.5">
+                  <h4 className="text-[10px] font-mono text-[var(--muted)] uppercase tracking-widest flex items-center gap-2">
+                    <Target size={12} className="text-blue-400" />
+                    <span>2. Sight Registry Feed</span>
+                  </h4>
+                  {sightSettings.length > 0 ? (
+                    <div className="bg-[var(--line)]/30 backdrop-blur-sm rounded-2xl p-4 max-h-36 overflow-y-auto space-y-2 font-mono text-xs scrollbar-hide">
+                      {sightSettings.map(s => (
+                        <div key={s.id} className="flex justify-between items-center border-b border-[var(--line)]/40 pb-1.5 last:border-b-0 last:pb-0">
+                          <span className="font-bold text-[#dcfc44]">{s.distance} meters</span>
+                          <div className="text-right">
+                            <span className="text-gray-300">Elev {s.elevation}</span>
+                            {s.windage !== 0 && (
+                              <span className="text-blue-400 ml-1.5">W: {s.windage > 0 ? `L${s.windage}` : `R${Math.abs(s.windage)}`}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-2xl bg-[var(--line)]/10 border border-dashed border-[var(--line)] text-center text-xs font-mono text-[var(--muted)]">
+                      No sight marks calibrated yet.
+                    </div>
+                  )}
+                </div>
+
+                {/* Sessions Summary Section */}
+                <div className="space-y-3.5">
+                  <h4 className="text-[10px] font-mono text-[var(--muted)] uppercase tracking-widest flex items-center gap-2">
+                    <History size={12} className="text-emerald-400" />
+                    <span>3. Performance Logs</span>
+                  </h4>
+                  {sessions.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-2 text-center font-mono">
+                      <div className="bg-[var(--line)]/20 p-3 rounded-2xl">
+                        <span className="text-[9px] text-gray-500 block uppercase">Total Sessions</span>
+                        <span className="text-lg font-black text-emerald-400 mt-1 block">{sessions.length}</span>
+                      </div>
+                      <div className="bg-[var(--line)]/20 p-3 rounded-2xl">
+                        <span className="text-[9px] text-gray-500 block uppercase">Log Count</span>
+                        <span className="text-lg font-black text-[var(--ink)] mt-1 block">{totalLoggedShots} shots</span>
+                      </div>
+                      <div className="bg-[var(--line)]/20 col-span-2 p-3 rounded-2xl flex justify-between items-center px-4">
+                        <span className="text-[9px] text-gray-500 uppercase">Average Shot Score</span>
+                        <span className="text-sm font-black text-[var(--accent)]">{averageAllShots} / 10</span>
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-4 rounded-2xl bg-[var(--line)]/10 border border-dashed border-[var(--line)] text-center text-xs font-mono text-[var(--muted)]">
-                  No sight marks calibrated yet.
-                </div>
-              )}
-            </div>
-
-            {/* Sessions Summary Section */}
-            <div className="space-y-3.5">
-              <h4 className="text-[10px] font-mono text-[var(--muted)] uppercase tracking-widest flex items-center gap-2">
-                <History size={12} className="text-emerald-400" />
-                <span>3. Performance Logs</span>
-              </h4>
-              {sessions.length > 0 ? (
-                <div className="grid grid-cols-2 gap-2 text-center font-mono">
-                  <div className="bg-[var(--line)]/20 p-3 rounded-2xl">
-                    <span className="text-[9px] text-gray-500 block uppercase">Total Sessions</span>
-                    <span className="text-lg font-black text-emerald-400 mt-1 block">{sessions.length}</span>
-                  </div>
-                  <div className="bg-[var(--line)]/20 p-3 rounded-2xl">
-                    <span className="text-[9px] text-gray-500 block uppercase">Log Count</span>
-                    <span className="text-lg font-black text-[var(--ink)] mt-1 block">{totalLoggedShots} shots</span>
-                  </div>
-                  <div className="bg-[var(--line)]/20 col-span-2 p-3 rounded-2xl flex justify-between items-center px-4">
-                    <span className="text-[9px] text-gray-500 uppercase">Average Shot Score</span>
-                    <span className="text-sm font-black text-[var(--accent)]">{averageAllShots} / 10</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-4 rounded-2xl bg-[var(--line)]/10 border border-dashed border-[var(--line)] text-center text-xs font-mono text-[var(--muted)]">
-                  Shoot a session to feed analytics.
-                </div>
-              )}
-            </div>
-
-            {/* Form Analysis Diagnostics Section */}
-            <div className="space-y-3.5">
-              <h4 className="text-[10px] font-mono text-[var(--muted)] uppercase tracking-widest flex items-center gap-2">
-                <Award size={12} className="text-purple-400" />
-                <span>4. Form Analysis Diagnostics</span>
-              </h4>
-              {analyses.length > 0 ? (
-                <div className="bg-[var(--line)]/30 backdrop-blur-sm rounded-2xl p-4 font-mono text-xs space-y-1.5">
-                  <div className="flex justify-between text-gray-400">
-                    <span>Uploaded Profiles</span>
-                    <span className="font-bold text-[var(--ink)]">{analyses.length} scans</span>
-                  </div>
-                  {analyses[0].issues && analyses[0].issues.length > 0 && (
-                    <div className="border-t border-[var(--line)]/40 pt-1.5 mt-1.5">
-                      <span className="text-[9px] text-gray-500 uppercase">Latest Form Error</span>
-                      <p className="text-red-400 text-[10px] truncate mt-0.5 font-bold">● {analyses[0].issues[0]}</p>
+                  ) : (
+                    <div className="p-4 rounded-2xl bg-[var(--line)]/10 border border-dashed border-[var(--line)] text-center text-xs font-mono text-[var(--muted)]">
+                      Shoot a session to feed analytics.
                     </div>
                   )}
                 </div>
-              ) : (
-                <div className="p-4 rounded-2xl bg-[var(--line)]/10 border border-dashed border-[var(--line)] text-center text-xs font-mono text-[var(--muted)]">
-                  No biometrics uploaded or scanned.
-                </div>
-              )}
-            </div>
 
-          </div>
+                {/* Form Analysis Diagnostics Section */}
+                <div className="space-y-3.5">
+                  <h4 className="text-[10px] font-mono text-[var(--muted)] uppercase tracking-widest flex items-center gap-2">
+                    <Award size={12} className="text-purple-400" />
+                    <span>4. Form Analysis Diagnostics</span>
+                  </h4>
+                  {analyses.length > 0 ? (
+                    <div className="bg-[var(--line)]/30 backdrop-blur-sm rounded-2xl p-4 font-mono text-xs space-y-1.5">
+                      <div className="flex justify-between text-gray-400">
+                        <span>Uploaded Profiles</span>
+                        <span className="font-bold text-[var(--ink)]">{analyses.length} scans</span>
+                      </div>
+                      {analyses[0].issues && analyses[0].issues.length > 0 && (
+                        <div className="border-t border-[var(--line)]/40 pt-1.5 mt-1.5">
+                          <span className="text-[9px] text-gray-500 uppercase">Latest Form Error</span>
+                          <p className="text-red-400 text-[10px] truncate mt-0.5 font-bold">● {analyses[0].issues[0]}</p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-2xl bg-[var(--line)]/10 border border-dashed border-[var(--line)] text-center text-xs font-mono text-[var(--muted)]">
+                      No biometrics uploaded or scanned.
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="agent-tab"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="bg-[var(--card-bg)] border border-[var(--line)] rounded-3xl p-6 shadow-sm space-y-6"
+              >
+                {/* Progression Panel */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
+                    <div>
+                      <h3 className="text-xs font-bold font-mono text-[#dcfc44] uppercase tracking-wider">
+                        Learning Progression
+                      </h3>
+                      <p className="text-[9px] text-gray-500 font-mono uppercase mt-0.5">
+                        Tactical Rank Credentials
+                      </p>
+                    </div>
+                    <TrendingUp size={12} className="text-emerald-400" />
+                  </div>
+
+                  {/* Calculated Level Title */}
+                  {(() => {
+                    const milestones = ["Setup Initial Account"];
+                    if (profile) milestones.push("Bio Profile");
+                    if (sessions.length > 0) milestones.push("First Shoot");
+                    if (sightSettings.length >= 2) milestones.push("Sight Calibration");
+                    if (analyses.length > 0) milestones.push("Form Diagnosis");
+
+                    let activeRank = "Level 1: Fledgling Archer";
+                    let rankDesc = "Complete your bio parameters and shoot your first session to unlock ranks.";
+                    if (milestones.length === 5) {
+                      activeRank = "Level 5: Olympic Masterclass";
+                      rankDesc = "Excellent! High-performance telemetry fully loaded. Focus details on flight tuning.";
+                    } else if (milestones.length === 4) {
+                      activeRank = "Level 4: Master Bow Tuner";
+                      rankDesc = "Complete all parameters. Set up form profiles for custom physical correction tips.";
+                    } else if (milestones.length === 3) {
+                      activeRank = "Level 3: Sight Registry Analyst";
+                      rankDesc = "Calibrate sight elevation scale data points to enable target projections.";
+                    } else if (milestones.length === 2) {
+                      activeRank = "Level 2: Consistent Marksman";
+                      rankDesc = "Set up your bow spec profile to calculate ideal safety specs.";
+                    }
+
+                    const progressPercent = Math.round((milestones.length / 5) * 100);
+
+                    return (
+                      <div className="space-y-3 font-mono">
+                        <div className="bg-[var(--line)]/30 rounded-2xl p-3.5 border border-[var(--line)]/40">
+                          <p className="text-[11px] font-black text-[var(--ink)]">{activeRank}</p>
+                          <p className="text-[9px] text-gray-400 leading-normal mt-1">{rankDesc}</p>
+                        </div>
+
+                        {/* Progress bar */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[8px] uppercase text-gray-500">
+                            <span>Syllabus Progress</span>
+                            <span>{progressPercent}% Completed</span>
+                          </div>
+                          <div className="h-2 bg-[var(--line)] rounded-full overflow-hidden">
+                            <motion.div 
+                              initial={{ width: 0 }}
+                              animate={{ width: `${progressPercent}%` }}
+                              transition={{ duration: 0.6 }}
+                              className="h-full bg-emerald-400 rounded-full"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Milestones Checklist */}
+                        <div className="space-y-1.5 pt-1 text-[10px]">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 size={12} className="text-emerald-400 shrink-0" />
+                            <span className="text-gray-300">Account Active (100% Online)</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {profile ? (
+                              <CheckCircle2 size={12} className="text-emerald-400 shrink-0" />
+                            ) : (
+                              <div className="w-3 h-3 rounded-full border border-gray-600 shrink-0" />
+                            )}
+                            <span className={profile ? 'text-gray-300' : 'text-gray-500'}>Archer Bio Specs Set</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {sessions.length > 0 ? (
+                              <CheckCircle2 size={12} className="text-emerald-400 shrink-0" />
+                            ) : (
+                              <div className="w-3 h-3 rounded-full border border-gray-600 shrink-0" />
+                            )}
+                            <span className={sessions.length > 0 ? 'text-gray-300' : 'text-gray-500'}>Record Practice Session</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {sightSettings.length >= 2 ? (
+                              <CheckCircle2 size={12} className="text-emerald-400 shrink-0" />
+                            ) : (
+                              <div className="w-3 h-3 rounded-full border border-gray-600 shrink-0" />
+                            )}
+                            <span className={sightSettings.length >= 2 ? 'text-gray-300' : 'text-gray-500'}>Calibrate 2+ Sight Marks ({sightSettings.length}/2)</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {analyses.length > 0 ? (
+                              <CheckCircle2 size={12} className="text-emerald-400 shrink-0" />
+                            ) : (
+                              <div className="w-3 h-3 rounded-full border border-gray-600 shrink-0" />
+                            )}
+                            <span className={analyses.length > 0 ? 'text-gray-300' : 'text-gray-500'}>Upload Biometric Hold Scans</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Cognitive Tuning Preferences */}
+                <div className="space-y-3 border-t border-[var(--line)] pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xs font-bold font-mono text-[#dcfc44] uppercase tracking-wider">
+                        Valkyrie Cognition Tone
+                      </h3>
+                      <p className="text-[9px] text-gray-500 font-mono uppercase mt-0.5">
+                        Agent personality weight
+                      </p>
+                    </div>
+                    <Volume2 size={12} className="text-blue-400" />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
+                    {[
+                      { id: 'analytical', label: '🔬 Physics Spec', desc: 'Metric & mechanical math' },
+                      { id: 'supportive', label: '🌟 Empathetic', desc: 'Positive encouragement' },
+                      { id: 'zen', label: '🧘 Zen Coach', desc: 'Mindfulness & breath focus' },
+                      { id: 'strict', label: '📏 Draconian', desc: 'Extreme critique focus' }
+                    ].map(t => {
+                      const isActive = (agentConfig.tone || 'analytical') === t.id;
+                      return (
+                        <button
+                          key={t.id}
+                          onClick={() => {
+                            const updated = { ...agentConfig, tone: t.id as any };
+                            setAgentConfig(updated);
+                            storage.saveAgentConfig(updated);
+                          }}
+                          className={`text-left p-2.5 rounded-xl border text-[10px] cursor-pointer transition-all ${
+                            isActive 
+                              ? 'border-[#dcfc44]/40 bg-[#dcfc44]/10 text-[#dcfc44]' 
+                              : 'border-[var(--line)] bg-[var(--line)]/10 hover:border-gray-500/30'
+                          }`}
+                        >
+                          <span className="font-extrabold block">{t.label}</span>
+                          <span className="text-[8px] text-gray-500 leading-normal block mt-0.5 font-normal">{t.desc}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Behavioral Directives / Rules Engine */}
+                <div className="space-y-3 border-t border-[var(--line)] pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xs font-bold font-mono text-[#dcfc44] uppercase tracking-wider">
+                        Rules & Guardrails
+                      </h3>
+                      <p className="text-[9px] text-gray-500 font-mono uppercase mt-0.5">
+                        Active safety limits
+                      </p>
+                    </div>
+                    <BookOpen size={12} className="text-amber-500" />
+                  </div>
+
+                  {/* Rules list */}
+                  <div className="space-y-1.5 font-mono text-[9px] max-h-36 overflow-y-auto scrollbar-hide pr-1">
+                    {agentConfig.rules.map((rule, idx) => (
+                      <div key={idx} className="flex justify-between items-start gap-2 bg-[var(--line)]/20 p-2 rounded-xl group/rule">
+                        <span className="text-gray-300 leading-relaxed">● {rule}</span>
+                        <button
+                          onClick={() => {
+                            const updatedRules = agentConfig.rules.filter((_, i) => i !== idx);
+                            const updated = { ...agentConfig, rules: updatedRules };
+                            setAgentConfig(updated);
+                            storage.saveAgentConfig(updated);
+                          }}
+                          className="text-gray-500 hover:text-red-400 transition-colors shrink-0 p-0.5 cursor-pointer md:opacity-0 group-hover/rule:opacity-100"
+                        >
+                          <Trash2 size={10} />
+                        </button>
+                      </div>
+                    ))}
+                    {agentConfig.rules.length === 0 && (
+                      <p className="text-center text-gray-500 py-3 italic">No custom rules active. Added guidelines will dictate behavior.</p>
+                    )}
+                  </div>
+
+                  {/* Add rule form */}
+                  <div className="flex gap-1.5 font-mono">
+                    <input
+                      type="text"
+                      value={newRuleInput}
+                      onChange={(e) => setNewRuleInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (!newRuleInput.trim()) return;
+                          const updated = { ...agentConfig, rules: [...agentConfig.rules, newRuleInput.trim()] };
+                          setAgentConfig(updated);
+                          storage.saveAgentConfig(updated);
+                          setNewRuleInput('');
+                        }
+                      }}
+                      placeholder="Add custom rule (e.g. Speak like a samurai)"
+                      className="flex-1 bg-[var(--line)] rounded-xl px-3 py-2 text-[9px] text-[var(--ink)] placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#dcfc44]/30"
+                    />
+                    <button
+                      onClick={() => {
+                        if (!newRuleInput.trim()) return;
+                        const updated = { ...agentConfig, rules: [...agentConfig.rules, newRuleInput.trim()] };
+                        setAgentConfig(updated);
+                        storage.saveAgentConfig(updated);
+                        setNewRuleInput('');
+                      }}
+                      className="px-3 rounded-xl bg-[var(--accent)] text-[var(--bg)] font-bold text-[10px] hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center justify-center shrink-0"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div className="p-5 border border-amber-500/10 rounded-2xl bg-amber-500/[0.01] items-start flex gap-3 text-[11px] leading-relaxed text-gray-400">
             <Info size={16} className="text-amber-500 shrink-0 mt-0.5" />
             <p>
@@ -398,6 +678,7 @@ export default function AIAssistant({ profile, sessions, sightSettings, analyses
             </p>
           </div>
         </div>
+
 
       </div>
     </div>

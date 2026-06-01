@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { ArcherProfile, Session, SightSetting, FormAnalysis } from '../types';
+import { ArcherProfile, Session, SightSetting, FormAnalysis, AgentConfig } from '../types';
 
 const ai = new GoogleGenAI({ 
   apiKey: process.env.GEMINI_API_KEY || "" 
@@ -18,6 +18,7 @@ export async function getTacticalAdvice(
     sessions: Session[];
     sightSettings: SightSetting[];
     analyses: FormAnalysis[];
+    agentConfig?: AgentConfig;
   }
 ) {
   // 1. Format Profile Context
@@ -39,6 +40,7 @@ Brace Height: ${p.brace_height ? p.brace_height + " inches" : "Not set"}
 Anchor Point Description: ${p.anchor_point || "Not set"}
     `.trim();
   }
+
 
   // 2. Format Sight Settings Context
   let sightSection = "No sight settings saved yet.";
@@ -84,6 +86,57 @@ Anchor Point Description: ${p.anchor_point || "Not set"}
     }).join("\n\n");
   }
 
+  // 5. Dynamic Learning Progression Tracking
+  let levelName = "Level 1: Fledgling Archer";
+  const completedMilestones: string[] = ["Setup Initial Account"];
+  if (context.profile) {
+    completedMilestones.push("Establish Archer Bio Profile");
+  }
+  if (context.sessions && context.sessions.length > 0) {
+    levelName = "Level 2: Consistent Marksman";
+    completedMilestones.push("Record First Shoot");
+    
+    // check average
+    const rawShots = context.sessions.flatMap(s => s.shots || []);
+    if (rawShots.length > 0) {
+      const sum = rawShots.reduce((acc, s) => acc + s.score, 0);
+      const avg = sum / rawShots.length;
+      if (avg >= 8.5 && context.sessions.length >= 3) {
+        completedMilestones.push("Shoot Elite Score");
+      }
+    }
+  }
+  if (context.sightSettings && context.sightSettings.length >= 2) {
+    if (context.sessions && context.sessions.length > 0) {
+      levelName = "Level 3: Sight Registry Analyst";
+    }
+    completedMilestones.push("Calibrate Sight Settings");
+  }
+  if (context.analyses && context.analyses.length > 0) {
+    if (context.sightSettings && context.sightSettings.length >= 2) {
+      levelName = "Level 4: Master Bow Tuner";
+    }
+    completedMilestones.push("Upload Form Diagnostics");
+  }
+  if (completedMilestones.length === 5) {
+    levelName = "Level 5: Elite Marksman Masterclass";
+  }
+
+  // 6. Agent Coaching Custom Tone and Rules Parsing
+  const agentTone = context.agentConfig?.tone || 'analytical';
+  const agentRules = context.agentConfig?.rules || [
+    'Always warn about draw weight/arrow spine mismatches.',
+    'Include a specific breathing cadence cue.',
+    'Focus corrections on steady back tension release.'
+  ];
+
+  const toneInstruction = {
+    analytical: "Maintain a forensic, metric-heavy, and physics-focused coaching attitude. Cite calculations and variables.",
+    supportive: "Adopt an optimistic, friendly, reassuring, and highly encouraging mental guidance approach. Build shooter confidence.",
+    zen: "Maintain a calm, centered, meditative, and breathing-oriented alignment focus. Treat archery as moving meditation.",
+    strict: "Deliver firm, precision-first, detail-driven posture criticisms and mechanical corrections. Demand accurate execution."
+  }[agentTone] || "Maintain an analytical, supportive, and professional demeanor.";
+
   const systemInstruction = `You are "Valkyrie", an advanced Archery Technical Advisor & High-Performance AI Coach.
 You have comprehensive real-time access to the user's complete profile, calibrated sight register, training sessions feed, and biomechanical form analysis telemetry.
 
@@ -101,9 +154,19 @@ ${sessionsSection}
 
 4. BIOMECHANICAL SHOT-FORM ANALYSIS:
 ${analysesSection}
+
+5. ARCHER PROGRESSION TRACKING:
+Current Progression Class: ${levelName}
+Completed Achievements: ${completedMilestones.join(", ")}
 =====================================
 
-TECHNICAL RULES & CAPABILITIES:
+COACH RULE BOOK (AGENT DIRECTIVES):
+These are parameters requested by the archer to tune your output response style. You MUST strictly adhere to these guidelines:
+- Custom Coach Tone Directive: "${toneInstruction}"
+- Custom Safety/Execution Directives:
+${agentRules.map((rule, idx) => `  ${idx + 1}. ${rule}`).join("\n")}
+
+TECHNICAL COACHING GUIDELINES & CAPABILITIES:
 1. SIGHT PREDICTIVE MATH:
    - If the user asks for intermediate sight placements (e.g. they have sight marks at 30m and 50m but want to shoot at 40m), perform visual/ballistic linear or parabolic interpolation estimating the correct elevation aperture height.
    - Example: If 30m is elevation '6.5' and 50m is '4.5', then 40m will be around '5.5'. Always explain your interpolation steps.
@@ -118,7 +181,8 @@ TECHNICAL RULES & CAPABILITIES:
 4. RE-COACH FORM DEFECTS:
    - If they ask about form or stance, look at their biomechanical analyses and reinforce the corrective actions (e.g., if issue is "anchor drift", explain how they can secure their jawline index).
 
-Keep your persona highly analytical, intelligent, supportive, and extremely professional. Format your outputs using beautiful markdown headers, bullet lists, bold text elements, and font-mono blocks for numeric ranges.`;
+Acknowledge their current Progression Class (${levelName}) dynamically if relevant to context. Format your outputs using beautiful markdown headers, bullet lists, bold text elements, and font-mono blocks for numeric ranges.`;
+
 
   try {
     const response = await ai.models.generateContent({
