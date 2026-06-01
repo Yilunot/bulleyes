@@ -43,6 +43,7 @@ export default function SightSettingsManager({ sightSettings, onSave, onDelete }
   const [filterDistance, setFilterDistance] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | undefined>(undefined);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   
   // Form State
   const [inputs, setInputs] = useState({
@@ -122,12 +123,11 @@ export default function SightSettingsManager({ sightSettings, onSave, onDelete }
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Delete this sight setting? This cannot be undone.')) {
-      try {
-        await onDelete(id);
-      } catch (err) {
-        alert('Failed to delete setting.');
-      }
+    try {
+      await onDelete(id);
+      setDeleteConfirmId(null);
+    } catch (err) {
+      setError('Failed to delete setting.');
     }
   };
 
@@ -294,20 +294,40 @@ export default function SightSettingsManager({ sightSettings, onSave, onDelete }
                     </div>
 
                     <div className="flex items-center gap-2 self-end sm:self-center">
-                      <button 
-                        onClick={() => handleEditClick(setting)}
-                        className="p-2 hover:bg-[var(--line)] border border-transparent hover:border-[var(--line)] text-[var(--muted)] hover:text-[var(--accent)] rounded-lg transition-colors"
-                        title="Edit Mark"
-                      >
-                        <Edit2 size={15} />
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(setting.id)}
-                        className="p-2 hover:bg-red-500/10 border border-transparent hover:border-red-500/10 text-[var(--muted)] hover:text-red-500 rounded-lg transition-colors"
-                        title="Delete Mark"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                      {deleteConfirmId === setting.id ? (
+                        <div className="flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-xl">
+                          <span className="text-[10px] font-mono text-xs text-red-500 uppercase font-semibold mr-1">Sure?</span>
+                          <button
+                            onClick={() => handleDelete(setting.id)}
+                            className="bg-red-500 hover:bg-red-600 text-white font-mono text-[9px] px-2 py-1 rounded-md uppercase tracking-wider font-bold transition-colors cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirmId(null)}
+                            className="bg-[var(--line)] hover:bg-[var(--line)]/80 text-[var(--muted)] font-mono text-[9px] px-2 py-1 rounded-md uppercase tracking-wider transition-colors cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <button 
+                            onClick={() => handleEditClick(setting)}
+                            className="p-2 hover:bg-[var(--line)] border border-transparent hover:border-[var(--line)] text-[var(--muted)] hover:text-[var(--accent)] rounded-lg transition-colors cursor-pointer"
+                            title="Edit Mark"
+                          >
+                            <Edit2 size={15} />
+                          </button>
+                          <button 
+                            onClick={() => setDeleteConfirmId(setting.id)}
+                            className="p-2 hover:bg-red-500/10 border border-transparent hover:border-red-500/10 text-[var(--muted)] hover:text-red-500 rounded-lg transition-colors cursor-pointer"
+                            title="Delete Mark"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))

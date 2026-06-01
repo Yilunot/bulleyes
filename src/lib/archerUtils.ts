@@ -3,14 +3,38 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/**
+ * Calculates draw length in inches based on wingspan in centimeters.
+ * 
+ * @param {number} wingspanCm - The wingspan of the archer in centimeters.
+ * @returns {number} The calculated draw length in inches (1-decimal place precision).
+ */
 export const calculateDrawLength = (wingspanCm: number) => {
   return parseFloat(((wingspanCm / 2.54) / 2.5).toFixed(1));
 };
 
+/**
+ * Calculates the ideal arrow shaft length in inches based on draw length.
+ * Standard safety guidelines dictate the shaft should be 1.5 inches past the bow shelf.
+ * 
+ * @param {number} drawLength - The archer's calculated draw length in inches.
+ * @returns {number} The ideal arrow shaft length in inches (1-decimal place precision).
+ */
 export const getIdealArrowLength = (drawLength: number) => {
   return parseFloat((drawLength + 1.5).toFixed(1));
 };
 
+/**
+ * Calculates the recommended static arrow spine (stiffness rating) based on multiple dynamic factors.
+ * Standardizes calculation to a standard 28" shaft with a 100-grain point, adjusted by length difference
+ * and point weight variation.
+ * 
+ * @param {number} arrowLength - Arrow shaft length in inches.
+ * @param {number} drawWeight - Bow draw weight in pounds (lbs).
+ * @param {string} [bowType='recurve'] - The category of bow ('traditional', 'recurve', 'compound').
+ * @param {number} [pointWeight=100] - Arrow point weight in grains.
+ * @returns {number} Recommended spine deflection rating (e.g. 340, 400, 500), clamped between 200 and 1800.
+ */
 export const calculateArrowSpine = (arrowLength: number, drawWeight: number, bowType: string = 'recurve', pointWeight: number = 100) => {
   // Base Spine Chart (Standardized for 28" shaft, 100gr point)
   // Bow type multiplier (Compound bows are much more aggressive/energetic)
@@ -47,13 +71,29 @@ export const calculateArrowSpine = (arrowLength: number, drawWeight: number, bow
   return Math.max(200, Math.min(1800, finalSpine));
 };
 
-// Deprecated or Bridge function to maintain compatibility during migration if needed
+/**
+ * Convenience helper combining getIdealArrowLength and calculateArrowSpine in a single structure.
+ * 
+ * @param {number} drawLength - Draw length in inches.
+ * @param {number} drawWeight - Bow draw weight in pounds (lbs).
+ * @param {string} [bowType='recurve'] - The category of bow ('traditional', 'recurve', 'compound').
+ * @param {number} [pointWeight=100] - Arrow point weight in grains.
+ * @returns {{arrowLength: number, arrowSpine: number}} Object containing ideal arrows shaft length and recommended stiffness rating.
+ */
 export const calculateArrowSpecs = (drawLength: number, drawWeight: number, bowType: string = 'recurve', pointWeight: number = 100) => {
   const arrowLength = getIdealArrowLength(drawLength);
   const arrowSpine = calculateArrowSpine(arrowLength, drawWeight, bowType, pointWeight);
   return { arrowLength, arrowSpine };
 };
 
+/**
+ * Recommends optimal brace height in inches based on riser length and limb size.
+ * Modern ATA standard recurve ratios applied.
+ * 
+ * @param {number} riser - Bow riser length in inches.
+ * @param {'short' | 'medium' | 'long'} limbs - Limb sizes.
+ * @returns {number} Ideal brace height range midpoint in inches.
+ */
 export const calculateBraceHeight = (riser: number, limbs: 'short' | 'medium' | 'long') => {
   // Total Bow Length mapping
   let bowLength = riser + (limbs === 'short' ? 41 : limbs === 'long' ? 45 : 43);
