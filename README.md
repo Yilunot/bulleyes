@@ -10,7 +10,6 @@ As per the CS180 Final Project guidelines, here are the paths to the required ma
 *   **Test Directory:** [`/tests`](./tests)
 *   **Requirement Spec & Design Document:** [`REQUIREMENTS_AND_DESIGN.md`](./REQUIREMENTS_AND_DESIGN.md)
 *   **Demo Video Link:** [Link to Demo Video (Replace with your YouTube/Drive Link)]
-*   **Lab 5 Worksheet:** [`LAB5_WORKSHEET.md`](./LAB5_WORKSHEET.md)
 
 ---
 
