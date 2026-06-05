@@ -39,6 +39,11 @@ To execute the engine unit tests:
 npm run test
 ```
 
+To run the test coverage report:
+```bash
+npx vitest run --coverage
+```
+
 ---
 
 ## 🎯 Major Features
