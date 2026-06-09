@@ -5,6 +5,18 @@ Welcome to the **Valkyrie Archery Performance Suite** (v4.2). Designed for compe
 
 ---
 
+## 📌 CS180 Submission Registry & Index
+
+In accordance with the **CS180 Final Project Submission** grading rubric, the required deliverables are indexed and linked below:
+
+*   📂 **Source Code Directory**: [`/src`](./src)
+*   🧪 **Test Suite Directory**: [`/tests`](./tests)
+*   📄 **Requirement Specification & Design Document**: [`/REQUIREMENTS_AND_DESIGN.md`](./REQUIREMENTS_AND_DESIGN.md)
+*   🎥 **Submission Demo Video**: [Valkyrie Performance Suite - Demo Showcase Video](https://www.youtube.com/watch?v=dQw4w9WgXcQ) *(Note to Graders/Team: Please replace this placeholder link with your final YouTube, Vimeo, or public Google Drive link.)*
+*   ⚙️ **Setup & Execution Instructions**: Detailed step-by-step setup can be found in [Part 1: Local Development & Running the Program](#🛠️-part-1-local-development--running-the-program).
+
+---
+
 ## 🛠️ Part 1: Local Development & Running the Program
 
 Follow these instructions to install, verify, and run the developer suite in your local environment.
