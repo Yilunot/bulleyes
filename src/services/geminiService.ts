@@ -258,7 +258,6 @@ Keep responses concise, technical but accessible, and always prioritize safety. 
 
 export const geminiService = {
   analyzeForm: async (base64Image: string) => {
-    // Basic image analysis implementation for FormAnalyzer
     const prompt = `You are an expert archery coach. Analyze this archer's form from the side profile.
 Focus on:
 1. Anchor point consistency.

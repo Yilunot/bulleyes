@@ -64,13 +64,27 @@ export default function FormAnalyzer({ onSave }: FormAnalyzerProps) {
         </div>
       </div>
 
+      <div className="bg-[#151619] border border-[#dcfc44]/20 rounded-3xl p-5 flex items-start gap-4 shadow-[0_0_50px_rgba(220,252,68,0.02)]">
+        <div className="p-3 rounded-full bg-[#dcfc44]/5 text-[#dcfc44] shrink-0">
+          <Sparkles className="w-5 h-5 animate-pulse" />
+        </div>
+        <div className="space-y-1">
+          <h4 className="text-xs font-bold font-mono uppercase tracking-wider text-[#dcfc44]">
+            Teacher & Evaluator Portal
+          </h4>
+          <p className="text-xs text-gray-400 leading-relaxed font-sans">
+            Ready to test the AI Coach's posture accuracy? Open the workspace directory <span className="text-[#dcfc44] font-mono bg-white/5 px-2 py-0.5 rounded-md text-[11px]">TestImages</span> to find clean recurve shooter samples (such as <span className="text-gray-300 font-mono text-[11px]">SLWU2465.jpg</span>, <span className="text-gray-300 font-mono text-[11px]">Recurve-Drawing-Technique-Im-Dong-Hyun.png</span>, or <span className="text-gray-300 font-mono text-[11px]">Recurve-Archery-Drills-Finger-Holds.jpg</span>). Simply download or drag any of these image files directly onto the upload pad below!
+          </p>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Upload/Preview Section */}
         <div className="space-y-6">
           <div className="relative aspect-[3/4] bg-[#151619] border border-white/10 rounded-3xl overflow-hidden group">
             {image ? (
               <>
-                <img src={image} className="w-full h-full object-cover" alt="Archer form" />
+                <img src={image} className="w-full h-full object-cover" alt="Archer form" referrerPolicy="no-referrer" />
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                   <button onClick={reset} className="bg-red-500 text-white px-4 py-2 rounded-full text-xs font-bold font-mono">DISCARD FRAME</button>
                 </div>
