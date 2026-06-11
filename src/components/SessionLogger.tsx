@@ -18,8 +18,12 @@ export default function SessionLogger({ onSave }: SessionLoggerProps) {
   const [distance, setDistance] = useState(18);
   const [targetType, setTargetType] = useState<Session['target_type']>('wa_122');
   
+  // Standard Indoor Round Parameters: 60 arrows max, configured of 3-arrow or 6-arrow ends
+  const [arrowsPerEnd, setArrowsPerEnd] = useState<3 | 6>(3);
+  const totalArrowsTarget = 60;
+  
   const handleManualScore = (score: number, is_x: boolean = false) => {
-    if (shots.length >= 36) return;
+    if (shots.length >= totalArrowsTarget) return;
 
     const newShot: Shot = {
       id: crypto.randomUUID(),
@@ -55,13 +59,14 @@ export default function SessionLogger({ onSave }: SessionLoggerProps) {
     });
   };
 
-  // Group shots into ends of 6
-  const ends = Array.from({ length: Math.ceil(shots.length / 6) || 1 }, (_, i) => 
-    shots.slice(i * 6, (i + 1) * 6)
+  // Group shots into ends of 3 or 6 arrows matching standard regulatory choices
+  const ends = Array.from({ length: Math.ceil(shots.length / arrowsPerEnd) || 1 }, (_, i) => 
+    shots.slice(i * arrowsPerEnd, (i + 1) * arrowsPerEnd)
   );
 
-  const currentEndIndex = Math.min(ends.length - 1, 5);
-  const isSessionComplete = shots.length >= 36;
+  const totalEnds = totalArrowsTarget / arrowsPerEnd;
+  const currentEndIndex = Math.min(ends.length - 1, totalEnds - 1);
+  const isSessionComplete = shots.length >= totalArrowsTarget;
 
   const calculateEndTotal = (endShots: Shot[]) => endShots.reduce((sum, s) => sum + s.score, 0);
   const totalScore = shots.reduce((sum, s) => sum + s.score, 0);
@@ -94,18 +99,28 @@ export default function SessionLogger({ onSave }: SessionLoggerProps) {
                 <Plus className="w-5 h-5 text-[#dcfc44]" />
                 Manual Entry
               </h2>
-              <div className="flex items-center gap-2 mt-1">
-                <p className="text-xs text-gray-400 font-mono">END {currentEndIndex + 1} OF 6</p>
-                <div className="flex gap-1">
-                  {[...Array(6)].map((_, i) => (
-                    <div 
-                      key={i} 
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        i < currentEndIndex ? 'bg-[#dcfc44]' : 
-                        i === currentEndIndex ? 'bg-[#dcfc44] animate-pulse' : 'bg-white/10'
-                      }`} 
-                    />
-                  ))}
+              <div className="flex flex-col gap-2 mt-1">
+                <p className="text-xs text-gray-400 font-mono uppercase tracking-wider">
+                  Shot {shots.length} of {totalArrowsTarget} &bull; End {Math.min(Math.ceil((shots.length + 0.1) / arrowsPerEnd), totalEnds)} of {totalEnds}
+                </p>
+                <div className="flex gap-1.5 items-center">
+                  <span className="text-[10px] text-gray-500 font-mono uppercase">Current End Shots:</span>
+                  <div className="flex gap-1">
+                    {[...Array(arrowsPerEnd)].map((_, i) => {
+                      const shotsInThisEndActive = shots.length % arrowsPerEnd === 0 && shots.length > 0 ? (isSessionComplete ? arrowsPerEnd : 0) : (shots.length % arrowsPerEnd);
+                      const isRecorded = i < shotsInThisEndActive;
+                      const isActive = i === shotsInThisEndActive && !isSessionComplete;
+                      return (
+                        <div 
+                          key={i} 
+                          className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                            isRecorded ? 'bg-[#dcfc44]' : 
+                            isActive ? 'bg-[#dcfc44]/40 animate-pulse border border-[#dcfc44]' : 'bg-white/10'
+                          }`} 
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
@@ -151,14 +166,14 @@ export default function SessionLogger({ onSave }: SessionLoggerProps) {
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm z-30"
+              className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm z-30"
             >
               <div className="text-center p-8">
-                <div className="w-16 h-16 bg-[#dcfc44] text-black rounded-full flex items-center justify-center mx-auto mb-4 font-black">
-                  36
+                <div className="w-16 h-16 bg-[#dcfc44] text-black rounded-full flex items-center justify-center mx-auto mb-4 font-black text-xl">
+                  {totalArrowsTarget}
                 </div>
-                <h3 className="text-2xl font-black text-white mb-2 uppercase tracking-tighter">Session Complete</h3>
-                <p className="text-sm text-gray-400 font-mono mb-8">TOTAL SCORE: {totalScore}</p>
+                <h3 className="text-2xl font-black text-white mb-2 uppercase tracking-tighter">Standard Round Complete</h3>
+                <p className="text-xs text-gray-400 font-mono mb-8">MAX POTENTIAL: {totalArrowsTarget * 10} | YOUR OFFICIAL TALLY: {totalScore}</p>
                 <button 
                   onClick={handleSave}
                   className="px-12 py-4 bg-[#dcfc44] text-black rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(220,252,68,0.3)]"
@@ -192,34 +207,51 @@ export default function SessionLogger({ onSave }: SessionLoggerProps) {
               </div>
             </div>
             
-            <div>
-              <label className="text-[10px] uppercase tracking-widest text-gray-500 font-mono mb-2 block">Target Configuration</label>
-              <select 
-                value={targetType}
-                onChange={e => setTargetType(e.target.value as any)}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:outline-none focus:border-[#dcfc44] text-white text-sm [&_option]:bg-[#1a1b1e] [&_option]:text-white [&_optgroup]:bg-[#1a1b1e] [&_optgroup]:text-gray-400 [&_optgroup]:font-mono [&_optgroup]:text-[10px] [&_optgroup]:uppercase"
-              >
-                <optgroup label="Outdoor (WA)">
-                  <option value="wa_122">WA 122cm</option>
-                  <option value="wa_80">WA 80cm</option>
-                </optgroup>
-                <optgroup label="Indoor">
-                  <option value="indoor_60">Indoor 60cm</option>
-                  <option value="indoor_40">Indoor 40cm</option>
-                </optgroup>
-                <optgroup label="Field">
-                  <option value="field_80">Field 80cm</option>
-                  <option value="field_65">Field 65cm</option>
-                  <option value="field_50">Field 50cm</option>
-                  <option value="field_35">Field 35cm</option>
-                  <option value="field_20">Field 20cm</option>
-                </optgroup>
-                <optgroup label="Practice & Other">
-                  <option value="foam_40x48">Foam 40"x48"</option>
-                  <option value="foam_25x32">Foam 25"x32"</option>
-                  <option value="3d">3D Target</option>
-                </optgroup>
-              </select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] uppercase tracking-widest text-gray-500 font-mono mb-2 block">Target Configuration</label>
+                <select 
+                  value={targetType}
+                  onChange={e => setTargetType(e.target.value as any)}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:outline-none focus:border-[#dcfc44] text-white text-sm [&_option]:bg-[#1a1b1e] [&_option]:text-white [&_optgroup]:bg-[#1a1b1e] [&_optgroup]:text-gray-400 [&_optgroup]:font-mono [&_optgroup]:text-[10px] [&_optgroup]:uppercase"
+                >
+                  <optgroup label="Outdoor (WA)">
+                    <option value="wa_122">WA 122cm</option>
+                    <option value="wa_80">WA 80cm</option>
+                  </optgroup>
+                  <optgroup label="Indoor">
+                    <option value="indoor_60">Indoor 60cm</option>
+                    <option value="indoor_40">Indoor 40cm</option>
+                  </optgroup>
+                  <optgroup label="Field">
+                    <option value="field_80">Field 80cm</option>
+                    <option value="field_65">Field 65cm</option>
+                    <option value="field_50">Field 50cm</option>
+                    <option value="field_35">Field 35cm</option>
+                    <option value="field_20">Field 20cm</option>
+                  </optgroup>
+                  <optgroup label="Practice & Other">
+                    <option value="foam_40x48">Foam 40"x48"</option>
+                    <option value="foam_25x32">Foam 25"x32"</option>
+                    <option value="3d">3D Target</option>
+                  </optgroup>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-widest text-gray-500 font-mono mb-2 block">End Configuration</label>
+                <select 
+                  value={arrowsPerEnd}
+                  onChange={e => {
+                    const val = Number(e.target.value) as 3 | 6;
+                    setArrowsPerEnd(val);
+                    setShots([]); // Reset active shots to prevent index errors
+                  }}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:outline-none focus:border-[#dcfc44] text-white text-sm [&_option]:bg-[#1a1b1e] [&_option]:text-white"
+                >
+                  <option value={3}>20 Ends of 3 Arrows</option>
+                  <option value={6}>10 Ends of 6 Arrows</option>
+                </select>
+              </div>
             </div>
 
             <div className="flex gap-4">
@@ -264,8 +296,8 @@ export default function SessionLogger({ onSave }: SessionLoggerProps) {
                     <span className="text-[10px] font-mono text-gray-500">CUMULATIVE: {currentTotal}</span>
                   </div>
                   <div className="p-4 bg-black/20">
-                    <div className="grid grid-cols-6 gap-1.5 mb-4">
-                      {Array.from({ length: 6 }).map((_, shotIdx) => {
+                    <div className={`grid gap-1.5 mb-4 ${arrowsPerEnd === 3 ? 'grid-cols-3' : 'grid-cols-6'}`}>
+                      {Array.from({ length: arrowsPerEnd }).map((_, shotIdx) => {
                         const shot = end[shotIdx];
                         return (
                           <div 
@@ -281,7 +313,7 @@ export default function SessionLogger({ onSave }: SessionLoggerProps) {
                         );
                       })}
                     </div>
-                    <div className="flex justify-between items-center border-t border-white/5 pt-3">
+                    <div className="flex justify-between items-center border-t border-[#white]/5 pt-3">
                       <div className="flex gap-6">
                         <div>
                           <p className="text-[7px] uppercase font-mono text-gray-600 tracking-widest mb-1">Subtotal</p>
@@ -294,7 +326,7 @@ export default function SessionLogger({ onSave }: SessionLoggerProps) {
                           </p>
                         </div>
                       </div>
-                      {end.length < 6 && endIdx === ends.length - 1 && (
+                      {end.length < arrowsPerEnd && endIdx === ends.length - 1 && (
                         <div className="flex items-center gap-2">
                           <div className="w-1.5 h-1.5 rounded-full bg-[#dcfc44] animate-pulse" />
                           <span className="text-[9px] text-[#dcfc44] font-mono font-bold tracking-widest">LOGGING</span>
